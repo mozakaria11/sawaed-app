@@ -32,18 +32,19 @@ jobs:
           sed -i 's/compileSdk = flutter.compileSdkVersion/compileSdk = 35/' android/app/build.gradle
           sed -i 's/targetSdk = flutter.targetSdkVersion/targetSdk = 35/' android/app/build.gradle
           sed -i 's#distributionUrl=.*#distributionUrl=https\\://services.gradle.org/distributions/gradle-8.6-all.zip#' android/gradle/wrapper/gradle-wrapper.properties
-          echo "===== settings.gradle ====="
-          cat android/settings.gradle
-          echo "===== app/build.gradle (أول 30 سطر) ====="
-          head -30 android/app/build.gradle
-          echo "===== gradle-wrapper.properties ====="
-          cat android/gradle/wrapper/gradle-wrapper.properties
+      - name: تغيير اسم التطبيق الظاهر تحت الأيقونة إلى SAC
+        run: |
+          sed -i 's/android:label="[^"]*"/android:label="SAC"/' android/app/src/main/AndroidManifest.xml
+          echo "===== AndroidManifest.xml (سطر label) ====="
+          grep "android:label" android/app/src/main/AndroidManifest.xml
       - name: تثبيت الحزم
         run: flutter pub get
+      - name: توليد أيقونة التطبيق من assets/icon/app_icon.png
+        run: dart run flutter_launcher_icons
       - name: بناء APK
-        run: flutter build apk --debug
+        run: flutter build apk --release
       - name: رفع الـ APK كملف جاهز للتنزيل
         uses: actions/upload-artifact@v4
         with:
           name: sawaed-app-release
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          path: build/app/outputs/flutter-apk/app-release.apk
