@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../services/api_service.dart';
 import 'home_screen.dart';
 import 'forgot_password_screen.dart';
 
@@ -25,14 +26,26 @@ class _LoginScreenState extends State<LoginScreen> {
     }
     setState(() => _loading = true);
 
-    // TODO: استبدل بـ ApiService.login الحقيقي بعد بناء الـAPI في Laravel
-    await Future.delayed(const Duration(milliseconds: 800));
+    final result = await ApiService.login(
+      _idController.text.trim(),
+      _passController.text,
+    );
 
     if (!mounted) return;
     setState(() => _loading = false);
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const HomeScreen()),
-    );
+
+    if (result['status'] == 'success' && result['token'] != null) {
+      await ApiService.saveToken(result['token']);
+      final userName = result['user']?['name'] ?? '';
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => HomeScreen(userName: userName)),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result['message'] ?? 'بيانات الدخول غير صحيحة')),
+      );
+    }
   }
 
   void _openForgotPassword() {
