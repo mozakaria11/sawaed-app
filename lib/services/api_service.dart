@@ -3,11 +3,10 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// خدمة الاتصال بسيرفر سواعد عربية
-/// غيّر baseUrl لرابط الـAPI الحقيقي بتاعك على السيرفر
 class ApiService {
   static const String baseUrl = 'https://hr.sawaedarab.com/api';
 
-  static Future<String?> _getToken() async {
+  static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('auth_token');
   }
@@ -24,32 +23,54 @@ class ApiService {
 
   static Future<Map<String, dynamic>> login(
       String nationalId, String password) async {
-    // TODO: استبدل بالرابط الحقيقي بعد بناء الـAPI في Laravel
     try {
       final res = await http.post(
         Uri.parse('$baseUrl/login'),
         headers: {'Accept': 'application/json'},
         body: {'national_id': nationalId, 'password': password},
       );
+      final body = jsonDecode(res.body);
       if (res.statusCode == 200) {
-        return jsonDecode(res.body);
+        return body;
       }
-      return {'status': 'error', 'message': 'بيانات الدخول غير صحيحة'};
+      return {
+        'status': 'error',
+        'message': body['message'] ?? 'بيانات الدخول غير صحيحة'
+      };
     } catch (e) {
       return {'status': 'error', 'message': 'تعذر الاتصال بالسيرفر'};
     }
   }
 
-  static Future<Map<String, dynamic>> punchAttendance(String type) async {
-    final token = await _getToken();
+  static Future<Map<String, dynamic>> logout() async {
+    final token = await getToken();
     try {
       final res = await http.post(
-        Uri.parse('$baseUrl/attendance/punch'),
+        Uri.parse('$baseUrl/logout'),
         headers: {
           'Accept': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: {'type': type},
+      );
+      await clearToken();
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body);
+      }
+      return {'status': 'error'};
+    } catch (e) {
+      return {'status': 'error', 'message': 'تعذر الاتصال بالسيرفر'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> me() async {
+    final token = await getToken();
+    try {
+      final res = await http.get(
+        Uri.parse('$baseUrl/me'),
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
       );
       if (res.statusCode == 200) {
         return jsonDecode(res.body);
