@@ -25,6 +25,20 @@ jobs:
           mkdir -p /tmp/scaffold
           flutter create --platforms=android --org com.sawaedarab --project-name sawaed_app /tmp/scaffold
           cp -r /tmp/scaffold/android .
+      - name: تصحيح إصدارات Kotlin وAGP وcompileSdk
+        run: |
+          # ترقية إصدار Kotlin وAGP في settings.gradle عشان يتوافق مع مكتبات المشروع
+          sed -i 's/id "org.jetbrains.kotlin.android" version "[^"]*"/id "org.jetbrains.kotlin.android" version "1.9.22"/' android/settings.gradle
+          sed -i 's/id "com.android.application" version "[^"]*"/id "com.android.application" version "8.3.0"/' android/settings.gradle
+
+          # فرض compileSdk وtargetSdk = 35 بدل الاعتماد على flutter.compileSdkVersion
+          sed -i 's/compileSdk = flutter.compileSdkVersion/compileSdk = 35/' android/app/build.gradle
+          sed -i 's/targetSdk = flutter.targetSdkVersion/targetSdk = 35/' android/app/build.gradle
+
+          echo "===== settings.gradle ====="
+          cat android/settings.gradle
+          echo "===== app/build.gradle (أول 30 سطر) ====="
+          head -30 android/app/build.gradle
       - name: تثبيت الحزم
         run: flutter pub get
       - name: بناء APK
