@@ -1,0 +1,45 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: تنزيل الكود
+        uses: actions/checkout@v4
+
+      - name: تثبيت Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: تثبيت Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+
+      - name: توليد هيكل مشروع أندرويد (لو ناقص)
+        run: |
+          if [ ! -f "android/app/build.gradle" ] && [ ! -f "android/app/build.gradle.kts" ]; then
+            mkdir -p /tmp/scaffold
+            flutter create --platforms=android --org com.sawaedarab --project-name sawaed_app /tmp/scaffold
+            cp -r /tmp/scaffold/android .
+          fi
+
+      - name: تثبيت الحزم
+        run: flutter pub get
+
+      - name: بناء APK
+        run: flutter build apk --release
+
+      - name: رفع الـ APK كملف جاهز للتنزيل
+        uses: actions/upload-artifact@v4
+        with:
+          name: sawaed-app-release
+          path: build/app/outputs/flutter-apk/app-release.apk
