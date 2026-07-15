@@ -3,7 +3,8 @@ import '../theme/app_theme.dart';
 import '../widgets/more_sheet.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final String userName;
+  const HomeScreen({super.key, required this.userName});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -12,11 +13,17 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _tabIndex = 0;
 
-  final _tabs = const [
-    _DashboardTab(),
-    _PlaceholderTab(title: 'حضوري', icon: Icons.calendar_month),
-    _PlaceholderTab(title: 'الراتب', icon: Icons.account_balance_wallet),
-  ];
+  late final List<Widget> _tabs;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabs = [
+      _DashboardTab(userName: widget.userName),
+      const _PlaceholderTab(title: 'حضوري', icon: Icons.calendar_month),
+      const _PlaceholderTab(title: 'الراتب', icon: Icons.account_balance_wallet),
+    ];
+  }
 
   void _onNavTap(int index) {
     if (index == 3) {
@@ -92,7 +99,8 @@ class _BottomNav extends StatelessWidget {
 
 /// ===================== تبويب الرئيسية (الداشبورد) =====================
 class _DashboardTab extends StatelessWidget {
-  const _DashboardTab();
+  final String userName;
+  const _DashboardTab({required this.userName});
 
   @override
   Widget build(BuildContext context) {
@@ -100,7 +108,7 @@ class _DashboardTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _Header(),
+          _Header(userName: userName),
           Transform.translate(
             offset: const Offset(0, -34),
             child: const _PunchCard(),
@@ -134,9 +142,11 @@ class _DashboardTab extends StatelessWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header();
+  final String userName;
+  const _Header({required this.userName});
   @override
   Widget build(BuildContext context) {
+    final initial = userName.isNotEmpty ? userName.substring(0, 1) : 'م';
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 60),
       decoration: const BoxDecoration(
@@ -156,20 +166,20 @@ class _Header extends StatelessWidget {
               shape: BoxShape.circle,
             ),
             alignment: Alignment.center,
-            child: const Text('م',
-                style: TextStyle(
+            child: Text(initial,
+                style: const TextStyle(
                     color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18)),
           ),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('محمد زكريا',
-                    style: TextStyle(
+                Text(userName.isNotEmpty ? userName : 'مستخدم',
+                    style: const TextStyle(
                         color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
-                SizedBox(height: 3),
-                Row(
+                const SizedBox(height: 3),
+                const Row(
                   children: [
                     Icon(Icons.location_on, size: 12, color: Colors.white70),
                     SizedBox(width: 3),
