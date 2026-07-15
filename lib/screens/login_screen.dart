@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 import 'home_screen.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -35,14 +35,10 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Future<void> _openForgotPassword() async {
-    final uri = Uri.parse('https://hr.sawaedarab.com/forgot-password');
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تعذر فتح الصفحة')),
-      );
-    }
+  void _openForgotPassword() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+    );
   }
 
   @override
@@ -64,21 +60,21 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(24),
                     child: Image.network(
                       'https://hr.sawaedarab.com/img/logo-sawaed.png',
-                      width: 130,
-                      height: 130,
+                      width: 170,
+                      height: 170,
                       fit: BoxFit.contain,
                       errorBuilder: (context, error, stack) => Container(
-                        width: 130,
-                        height: 130,
+                        width: 170,
+                        height: 170,
                         decoration: BoxDecoration(
                           color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(24),
+                          borderRadius: BorderRadius.circular(28),
                         ),
                         child: const Icon(Icons.business,
-                            color: Colors.white, size: 56),
+                            color: Colors.white, size: 70),
                       ),
                     ),
                   ),
