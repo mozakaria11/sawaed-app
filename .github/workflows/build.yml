@@ -41,9 +41,9 @@ jobs:
       - name: تثبيت الحزم
         run: flutter pub get
       - name: بناء APK
-        run: flutter build apk --release
+        run: flutter build apk --debug
       - name: رفع الـ APK كملف جاهز للتنزيل
         uses: actions/upload-artifact@v4
         with:
           name: sawaed-app-release
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
