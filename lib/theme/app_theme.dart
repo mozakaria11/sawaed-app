@@ -16,6 +16,9 @@ class AppColors {
   static const Color info = Color(0xFF185FA5);
   static const Color infoBg = Color(0xFFE8F0FF);
 
+  static const Color purple = Color(0xFF7C3AED);
+  static const Color purpleBg = Color(0xFFF3E8FF);
+
   static const Color textDark = Color(0xFF2C2C2A);
   static const Color textMuted = Color(0xFFADB5BD);
   static const Color background = Color(0xFFF0F2F5);
