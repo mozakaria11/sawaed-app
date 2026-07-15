@@ -64,21 +64,21 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(20),
                     child: Image.network(
                       'https://hr.sawaedarab.com/img/logo-sawaed.png',
-                      width: 84,
-                      height: 84,
+                      width: 130,
+                      height: 130,
                       fit: BoxFit.contain,
                       errorBuilder: (context, error, stack) => Container(
-                        width: 70,
-                        height: 70,
+                        width: 130,
+                        height: 130,
                         decoration: BoxDecoration(
                           color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(24),
                         ),
                         child: const Icon(Icons.business,
-                            color: Colors.white, size: 30),
+                            color: Colors.white, size: 56),
                       ),
                     ),
                   ),
