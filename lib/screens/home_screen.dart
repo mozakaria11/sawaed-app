@@ -98,44 +98,84 @@ class _BottomNav extends StatelessWidget {
 }
 
 /// ===================== تبويب الرئيسية (الداشبورد) =====================
-class _DashboardTab extends StatelessWidget {
+class _DashboardTab extends StatefulWidget {
   final String userName;
   const _DashboardTab({required this.userName});
 
   @override
+  State<_DashboardTab> createState() => _DashboardTabState();
+}
+
+class _DashboardTabState extends State<_DashboardTab> {
+  bool _loading = true;
+  Map<String, dynamic>? _today;
+  Map<String, dynamic>? _stats;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchSummary();
+  }
+
+  Future<void> _fetchSummary() async {
+    final result = await ApiService.dashboardSummary();
+    if (!mounted) return;
+    setState(() {
+      _loading = false;
+      if (result['status'] == 'success') {
+        _today = result['today'];
+        _stats = result['stats'];
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _Header(userName: userName),
-          Transform.translate(
-            offset: const Offset(0, -34),
-            child: const _PunchCard(),
-          ),
-          Transform.translate(
-            offset: const Offset(0, -18),
-            child: Column(
-              children: const [
-                _SectionTitle(icon: Icons.bar_chart, title: 'إحصائيات الشهر'),
-                _StatsRow(),
-                SizedBox(height: 18),
-                _SectionTitle(icon: Icons.calendar_today, title: 'تقويم الحضور'),
-                _CalendarCard(),
-                SizedBox(height: 18),
-                _SectionTitle(icon: Icons.wallet, title: 'الراتب'),
-                _SalaryCard(),
-                SizedBox(height: 18),
-                _SectionTitle(icon: Icons.bolt, title: 'إجراءات سريعة'),
-                _QuickActions(),
-                SizedBox(height: 18),
-                _SectionTitle(icon: Icons.notifications, title: 'آخر الإشعارات'),
-                _NotificationsCard(),
-                SizedBox(height: 24),
-              ],
+    if (_loading) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.only(top: 120),
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+      );
+    }
+    return RefreshIndicator(
+      onRefresh: _fetchSummary,
+      color: AppColors.primary,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _Header(userName: widget.userName),
+            Transform.translate(
+              offset: const Offset(0, -34),
+              child: _PunchCard(today: _today ?? const {}),
             ),
-          ),
-        ],
+            Transform.translate(
+              offset: const Offset(0, -18),
+              child: Column(
+                children: [
+                  const _SectionTitle(icon: Icons.bar_chart, title: 'إحصائيات الشهر'),
+                  _StatsRow(stats: _stats ?? const {}),
+                  const SizedBox(height: 18),
+                  const _SectionTitle(icon: Icons.calendar_today, title: 'تقويم الحضور'),
+                  const _CalendarCard(),
+                  const SizedBox(height: 18),
+                  const _SectionTitle(icon: Icons.wallet, title: 'الراتب'),
+                  const _SalaryCard(),
+                  const SizedBox(height: 18),
+                  const _SectionTitle(icon: Icons.bolt, title: 'إجراءات سريعة'),
+                  const _QuickActions(),
+                  const SizedBox(height: 18),
+                  const _SectionTitle(icon: Icons.notifications, title: 'آخر الإشعارات'),
+                  const _NotificationsCard(),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -221,9 +261,24 @@ class _Header extends StatelessWidget {
 }
 
 class _PunchCard extends StatelessWidget {
-  const _PunchCard();
+  final Map<String, dynamic> today;
+  const _PunchCard({required this.today});
+
   @override
   Widget build(BuildContext context) {
+    final clockIn = today['clock_in'] as String?;
+    final clockOut = today['clock_out'] as String?;
+    final shiftStart = today['shift_start'] as String? ?? '--:--';
+    final shiftEnd = today['shift_end'] as String? ?? '--:--';
+    final isCheckedIn = today['is_checked_in'] == true;
+    final workDuration = today['work_duration'] as String?;
+
+    final statusLabel = isCheckedIn ? 'وقت العمل الآن' : (clockIn == null ? 'لم يتم تسجيل الحضور بعد' : 'تم الانصراف');
+    final mainTime = clockIn ?? '--:--';
+    final hint = clockIn == null
+        ? 'اضغط على أيقونة الحضور لتسجيل الدخول'
+        : (isCheckedIn ? 'تم تسجيل الحضور ✓' : 'تم تسجيل الانصراف ✓');
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(16),
@@ -268,23 +323,23 @@ class _PunchCard extends StatelessWidget {
                         color: AppColors.primaryBg,
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.circle, size: 6, color: AppColors.primary),
-                          SizedBox(width: 4),
-                          Text('وقت العمل الآن',
-                              style: TextStyle(
+                          const Icon(Icons.circle, size: 6, color: AppColors.primary),
+                          const SizedBox(width: 4),
+                          Text(statusLabel,
+                              style: const TextStyle(
                                   fontSize: 10, color: AppColors.primary, fontWeight: FontWeight.w600)),
                         ],
                       ),
                     ),
                     const SizedBox(height: 6),
-                    const Text('08:03 AM',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.textDark)),
+                    Text(mainTime,
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.textDark)),
                     const SizedBox(height: 2),
-                    const Text('تم تسجيل الحضور ✓',
-                        style: TextStyle(fontSize: 10.5, color: AppColors.textMuted)),
+                    Text(hint,
+                        style: const TextStyle(fontSize: 10.5, color: AppColors.textMuted)),
                   ],
                 ),
               ),
@@ -303,12 +358,15 @@ class _PunchCard extends StatelessWidget {
           const Divider(height: 1),
           const SizedBox(height: 10),
           Row(
-            children: const [
-              _PunchTimeItem(value: '08:00 AM', label: 'بداية الدوام'),
-              _VDivider(),
-              _PunchTimeItem(value: '05:00 PM', label: 'نهاية الدوام'),
-              _VDivider(),
-              _PunchTimeItem(value: '2.5 س', label: 'OT الشهر', color: AppColors.primary),
+            children: [
+              _PunchTimeItem(value: shiftStart, label: 'بداية الدوام'),
+              const _VDivider(),
+              _PunchTimeItem(value: shiftEnd, label: 'نهاية الدوام'),
+              const _VDivider(),
+              _PunchTimeItem(
+                  value: workDuration ?? (clockOut ?? '--:--'),
+                  label: workDuration != null ? 'مدة العمل' : 'وقت الانصراف',
+                  color: AppColors.primary),
             ],
           ),
         ],
@@ -367,19 +425,25 @@ class _SectionTitle extends StatelessWidget {
 }
 
 class _StatsRow extends StatelessWidget {
-  const _StatsRow();
+  final Map<String, dynamic> stats;
+  const _StatsRow({required this.stats});
   @override
   Widget build(BuildContext context) {
-    final stats = [
-      (Icons.check, '18', 'حضور', AppColors.primary, AppColors.primaryBg),
-      (Icons.close, '2', 'غياب', AppColors.danger, AppColors.dangerBg),
-      (Icons.bolt, '6.5', 'OT', AppColors.primary, AppColors.primaryBg),
-      (Icons.show_chart, '90%', 'التزام', AppColors.info, AppColors.infoBg),
+    final present = stats['present']?.toString() ?? '0';
+    final absent = stats['absent']?.toString() ?? '0';
+    final otHours = stats['ot_hours']?.toString() ?? '0';
+    final rate = stats['rate'] != null ? '${stats['rate']}%' : '0%';
+
+    final statsList = [
+      (Icons.check, present, 'حضور', AppColors.primary, AppColors.primaryBg),
+      (Icons.close, absent, 'غياب', AppColors.danger, AppColors.dangerBg),
+      (Icons.bolt, otHours, 'OT', AppColors.primary, AppColors.primaryBg),
+      (Icons.show_chart, rate, 'التزام', AppColors.info, AppColors.infoBg),
     ];
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
-        children: stats.map((s) {
+        children: statsList.map((s) {
           final (icon, num, lbl, color, bg) = s;
           return Expanded(
             child: Container(
