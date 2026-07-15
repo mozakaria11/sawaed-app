@@ -80,4 +80,23 @@ class ApiService {
       return {'status': 'error', 'message': 'تعذر الاتصال بالسيرفر'};
     }
   }
+
+  static Future<Map<String, dynamic>> dashboardSummary() async {
+    final token = await getToken();
+    try {
+      final res = await http.get(
+        Uri.parse('$baseUrl/dashboard/summary'),
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body);
+      }
+      return {'status': 'error'};
+    } catch (e) {
+      return {'status': 'error', 'message': 'تعذر الاتصال بالسيرفر'};
+    }
+  }
 }
