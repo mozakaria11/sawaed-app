@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
-import 'attendance_screen.dart';
+import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -24,14 +25,24 @@ class _LoginScreenState extends State<LoginScreen> {
     }
     setState(() => _loading = true);
 
-    // TODO: استبدل بالاتصال الحقيقي بـApiService.login بعد بناء الـAPI
+    // TODO: استبدل بـ ApiService.login الحقيقي بعد بناء الـAPI في Laravel
     await Future.delayed(const Duration(milliseconds: 800));
 
     if (!mounted) return;
     setState(() => _loading = false);
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const AttendanceScreen()),
+      MaterialPageRoute(builder: (_) => const HomeScreen()),
     );
+  }
+
+  Future<void> _openForgotPassword() async {
+    final uri = Uri.parse('https://hr.sawaedarab.com/forgot-password');
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تعذر فتح الصفحة')),
+      );
+    }
   }
 
   @override
@@ -47,20 +58,29 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         child: SafeArea(
           child: Center(
-            child: Padding(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(
-                    width: 70,
-                    height: 70,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(20),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Image.network(
+                      'https://hr.sawaedarab.com/img/logo-sawaed.png',
+                      width: 84,
+                      height: 84,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stack) => Container(
+                        width: 70,
+                        height: 70,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Icon(Icons.business,
+                            color: Colors.white, size: 30),
+                      ),
                     ),
-                    child: const Icon(Icons.business,
-                        color: Colors.white, size: 30),
                   ),
                   const SizedBox(height: 16),
                   const Text(
@@ -123,6 +143,17 @@ class _LoginScreenState extends State<LoginScreen> {
                                   fontSize: 14, fontWeight: FontWeight.w700)),
                     ),
                   ),
+                  TextButton(
+                    onPressed: _openForgotPassword,
+                    child: const Text(
+                      'نسيت كلمة السر؟',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -156,8 +187,7 @@ class _LoginScreenState extends State<LoginScreen> {
           hintText: hint,
           hintStyle:
               const TextStyle(fontSize: 12.5, color: AppColors.textMuted),
-          prefixIcon:
-              Icon(icon, size: 18, color: AppColors.textMuted),
+          prefixIcon: Icon(icon, size: 18, color: AppColors.textMuted),
           suffixIcon: suffix,
           border: InputBorder.none,
           contentPadding:
