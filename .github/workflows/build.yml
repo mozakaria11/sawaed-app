@@ -38,9 +38,9 @@ jobs:
           sed -i 's/android:label="[^"]*"/android:label="SAC"/' android/app/src/main/AndroidManifest.xml
           echo "===== AndroidManifest.xml (سطر label) ====="
           grep "android:label" android/app/src/main/AndroidManifest.xml
-      - name: إضافة رخصة الإنترنت (ضرورية لتحميل اللوجو والاتصال بالـAPI)
+      - name: إضافة رخصة الإنترنت والموقع (ضرورية لتحميل اللوجو والاتصال بالـAPI وتسجيل الحضور)
         run: |
-          sed -i '/<manifest/a\    <uses-permission android:name="android.permission.INTERNET"/>' android/app/src/main/AndroidManifest.xml
+          sed -i '/<manifest/a\    <uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>' android/app/src/main/AndroidManifest.xml
           echo "===== AndroidManifest.xml (كامل) ====="
           cat android/app/src/main/AndroidManifest.xml
       - name: تثبيت الحزم
