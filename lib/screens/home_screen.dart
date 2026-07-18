@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/more_sheet.dart';
 import '../services/api_service.dart';
+import 'package:geolocator/geolocator.dart';
 
 class HomeScreen extends StatefulWidget {
   final String userName;
@@ -109,25 +110,102 @@ class _DashboardTab extends StatefulWidget {
 
 class _DashboardTabState extends State<_DashboardTab> {
   bool _loading = true;
+  bool _punching = false;
   Map<String, dynamic>? _today;
   Map<String, dynamic>? _stats;
+  Map<String, dynamic>? _payroll;
+  String? _payrollError;
 
   @override
   void initState() {
     super.initState();
-    _fetchSummary();
+    _fetchAll();
   }
 
-  Future<void> _fetchSummary() async {
-    final result = await ApiService.dashboardSummary();
+  Future<void> _fetchAll() async {
+    final results = await Future.wait([
+      ApiService.dashboardSummary(),
+      ApiService.salaryLatest(),
+    ]);
+    final dashboardResult = results[0];
+    final salaryResult = results[1];
+
     if (!mounted) return;
     setState(() {
       _loading = false;
-      if (result['status'] == 'success') {
-        _today = result['today'];
-        _stats = result['stats'];
+      if (dashboardResult['status'] == 'success') {
+        _today = dashboardResult['today'];
+        _stats = dashboardResult['stats'];
+      }
+      if (salaryResult['status'] == 'success') {
+        _payroll = salaryResult['payroll'];
+        _payrollError = null;
+      } else {
+        _payroll = null;
+        _payrollError = salaryResult['message'] as String?;
       }
     });
+  }
+
+  Future<Position?> _getCurrentPosition() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      _showMessage('من فضلك فعّل خدمة الموقع (GPS) من إعدادات الجهاز');
+      return null;
+    }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        _showMessage('يجب السماح بصلاحية الموقع لتسجيل الحضور');
+        return null;
+      }
+    }
+    if (permission == LocationPermission.deniedForever) {
+      _showMessage('صلاحية الموقع مرفوضة نهائيًا، فعّلها من إعدادات التطبيق');
+      return null;
+    }
+
+    return Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+  }
+
+  void _showMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _handlePunch() async {
+    if (_punching) return;
+    setState(() => _punching = true);
+
+    final position = await _getCurrentPosition();
+    if (position == null) {
+      setState(() => _punching = false);
+      return;
+    }
+
+    final isCheckedIn = _today?['is_checked_in'] == true;
+    final result = isCheckedIn
+        ? await ApiService.punchOut(position.latitude, position.longitude)
+        : await ApiService.punchIn(position.latitude, position.longitude);
+
+    if (!mounted) return;
+    setState(() => _punching = false);
+
+    if (result['success'] == true) {
+      _showMessage(result['message'] ?? 'تم بنجاح');
+      await _fetchAll();
+    } else {
+      final distance = result['distance'];
+      final radius = result['allowed_radius'];
+      final extra = (distance != null && radius != null)
+          ? ' (المسافة: ${distance}م، المسموح: ${radius}م)'
+          : '';
+      _showMessage('${result['message'] ?? 'حدث خطأ'}$extra');
+    }
   }
 
   @override
@@ -141,7 +219,7 @@ class _DashboardTabState extends State<_DashboardTab> {
       );
     }
     return RefreshIndicator(
-      onRefresh: _fetchSummary,
+      onRefresh: _fetchAll,
       color: AppColors.primary,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -151,7 +229,11 @@ class _DashboardTabState extends State<_DashboardTab> {
             _Header(userName: widget.userName),
             Transform.translate(
               offset: const Offset(0, -34),
-              child: _PunchCard(today: _today ?? const {}),
+              child: _PunchCard(
+                today: _today ?? const {},
+                loading: _punching,
+                onPunch: _handlePunch,
+              ),
             ),
             Transform.translate(
               offset: const Offset(0, -18),
@@ -164,7 +246,7 @@ class _DashboardTabState extends State<_DashboardTab> {
                   const _CalendarCard(),
                   const SizedBox(height: 18),
                   const _SectionTitle(icon: Icons.wallet, title: 'الراتب'),
-                  const _SalaryCard(),
+                  _SalaryCard(payroll: _payroll, errorMessage: _payrollError),
                   const SizedBox(height: 18),
                   const _SectionTitle(icon: Icons.bolt, title: 'إجراءات سريعة'),
                   const _QuickActions(),
@@ -263,7 +345,9 @@ class _Header extends StatelessWidget {
 
 class _PunchCard extends StatelessWidget {
   final Map<String, dynamic> today;
-  const _PunchCard({required this.today});
+  final bool loading;
+  final VoidCallback onPunch;
+  const _PunchCard({required this.today, required this.loading, required this.onPunch});
 
   @override
   Widget build(BuildContext context) {
@@ -294,23 +378,38 @@ class _PunchCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Container(
-                width: 66,
-                height: 66,
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                      colors: [AppColors.primaryDark, AppColors.primary]),
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: const Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.fingerprint, color: Colors.white, size: 22),
-                    SizedBox(height: 2),
-                    Text('حضور',
-                        style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w600)),
-                  ],
+              InkWell(
+                borderRadius: BorderRadius.circular(33),
+                onTap: loading ? null : onPunch,
+                child: Container(
+                  width: 66,
+                  height: 66,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: isCheckedIn
+                          ? [const Color(0xFF8A1010), const Color(0xFFD02020)]
+                          : [AppColors.primaryDark, AppColors.primary],
+                    ),
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: loading
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                        )
+                      : Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(isCheckedIn ? Icons.logout : Icons.fingerprint,
+                                color: Colors.white, size: 22),
+                            const SizedBox(height: 2),
+                            Text(isCheckedIn ? 'انصراف' : 'حضور',
+                                style: const TextStyle(
+                                    color: Colors.white, fontSize: 9, fontWeight: FontWeight.w600)),
+                          ],
+                        ),
                 ),
               ),
               const SizedBox(width: 14),
@@ -552,15 +651,57 @@ class _CalendarCard extends StatelessWidget {
 }
 
 class _SalaryCard extends StatelessWidget {
-  const _SalaryCard();
+  final Map<String, dynamic>? payroll;
+  final String? errorMessage;
+  const _SalaryCard({this.payroll, this.errorMessage});
+
+  String _fmt(num? v) {
+    if (v == null) return '0';
+    final n = v.toDouble();
+    return n == n.roundToDouble()
+        ? n.toInt().toString().replaceAllMapped(
+            RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')
+        : n.toStringAsFixed(0);
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (payroll == null) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(.04), blurRadius: 6)],
+        ),
+        child: Column(
+          children: [
+            const Icon(Icons.wallet_outlined, size: 30, color: AppColors.textMuted),
+            const SizedBox(height: 8),
+            Text(errorMessage ?? 'لا يوجد راتب مسجل بعد',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 11.5, color: AppColors.textMuted)),
+          ],
+        ),
+      );
+    }
+
+    final basic = payroll!['basic_salary'] as num? ?? 0;
+    final housing = payroll!['housing_allowance'] as num? ?? 0;
+    final transport = payroll!['transport_allowance'] as num? ?? 0;
+    final overtime = payroll!['overtime_total'] as num? ?? 0;
+    final deductions = payroll!['deductions_total'] as num? ?? 0;
+    final net = payroll!['net_salary'] as num? ?? 0;
+    final monthLabel = payroll!['month_label'] as String? ?? '';
+
     final items = [
-      ('الأساسي', '5,000 ر.س', Colors.white),
-      ('أوفر تايم', '+250 ر.س', const Color(0xFF4ADE80)),
-      ('خصم غياب', '-166 ر.س', const Color(0xFFF87171)),
-      ('بدلات', '+800 ر.س', const Color(0xFF4ADE80)),
+      ('الأساسي', '${_fmt(basic)} ر.س', Colors.white),
+      ('بدلات', '+${_fmt(housing + transport)} ر.س', const Color(0xFF4ADE80)),
+      if (overtime > 0) ('أوفر تايم', '+${_fmt(overtime)} ر.س', const Color(0xFF4ADE80)),
+      if (deductions > 0) ('خصومات', '-${_fmt(deductions)} ر.س', const Color(0xFFF87171)),
     ];
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(18),
@@ -571,15 +712,15 @@ class _SalaryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('صافي راتب مايو 2026',
-              style: TextStyle(color: Colors.white60, fontSize: 11)),
+          Text('صافي راتب $monthLabel',
+              style: const TextStyle(color: Colors.white60, fontSize: 11)),
           const SizedBox(height: 4),
           RichText(
-            text: const TextSpan(children: [
+            text: TextSpan(children: [
               TextSpan(
-                  text: '5,884 ',
-                  style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w800)),
-              TextSpan(text: 'ر.س', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                  text: '${_fmt(net)} ',
+                  style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w800)),
+              const TextSpan(text: 'ر.س', style: TextStyle(color: Colors.white70, fontSize: 13)),
             ]),
           ),
           const SizedBox(height: 14),
