@@ -99,4 +99,74 @@ class ApiService {
       return {'status': 'error', 'message': 'تعذر الاتصال بالسيرفر'};
     }
   }
+
+  static Future<Map<String, dynamic>> salaryLatest() async {
+    final token = await getToken();
+    try {
+      final res = await http.get(
+        Uri.parse('$baseUrl/salary/latest'),
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+      final body = jsonDecode(res.body);
+      if (res.statusCode == 200) {
+        return body;
+      }
+      return {
+        'status': 'error',
+        'message': body['message'] ?? 'لا يوجد راتب مسجل بعد',
+      };
+    } catch (e) {
+      return {'status': 'error', 'message': 'تعذر الاتصال بالسيرفر'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> punchIn(double lat, double lng) async {
+    final token = await getToken();
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/attendance/punch-in'),
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: {'latitude': lat.toString(), 'longitude': lng.toString()},
+      );
+      final body = jsonDecode(res.body);
+      if (res.statusCode == 200) {
+        return {'success': true, ...body};
+      }
+      return {
+        'success': false,
+        'message': body['message'] ?? 'تعذر تسجيل الحضور',
+        'distance': body['distance'],
+        'allowed_radius': body['allowed_radius'],
+      };
+    } catch (e) {
+      return {'success': false, 'message': 'تعذر الاتصال بالسيرفر'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> punchOut(double lat, double lng) async {
+    final token = await getToken();
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/attendance/punch-out'),
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: {'latitude': lat.toString(), 'longitude': lng.toString()},
+      );
+      final body = jsonDecode(res.body);
+      if (res.statusCode == 200) {
+        return {'success': true, ...body};
+      }
+      return {'success': false, 'message': body['message'] ?? 'تعذر تسجيل الانصراف'};
+    } catch (e) {
+      return {'success': false, 'message': 'تعذر الاتصال بالسيرفر'};
+    }
+  }
 }
