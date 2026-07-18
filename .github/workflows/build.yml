@@ -62,7 +62,10 @@ jobs:
       - name: توليد أيقونة التطبيق من assets/icon/app_icon.png
         run: dart run flutter_launcher_icons
       - name: بناء APK
-        run: flutter build apk --release
+        run: |
+          BUILD_STAMP=$(date -u +"%Y-%m-%d %H:%M UTC")
+          echo "وقت هذا البناء: $BUILD_STAMP"
+          flutter build apk --release --dart-define=BUILD_STAMP="$BUILD_STAMP"
       - name: رفع الـ APK كملف جاهز للتنزيل
         uses: actions/upload-artifact@v4
         with:
