@@ -3,6 +3,8 @@ import '../theme/app_theme.dart';
 import '../widgets/more_sheet.dart';
 import '../services/api_service.dart';
 import 'package:geolocator/geolocator.dart';
+import 'dart:io';
+import 'face_capture_screen.dart';
 
 /// رقم/وقت البناء — بيتغير تلقائيًا مع كل عملية بناء جديدة عبر build.yml،
 /// عشان تقدر تتأكد فورًا إنك شغال بآخر نسخة فعليًا.
@@ -192,10 +194,25 @@ class _DashboardTabState extends State<_DashboardTab> {
       return;
     }
 
+    if (!mounted) {
+      setState(() => _punching = false);
+      return;
+    }
+
+    final photo = await Navigator.of(context).push<File?>(
+      MaterialPageRoute(builder: (_) => const FaceCaptureScreen()),
+    );
+
+    if (photo == null) {
+      // المستخدم لغى عملية التصوير
+      setState(() => _punching = false);
+      return;
+    }
+
     final isCheckedIn = _today?['is_checked_in'] == true;
     final result = isCheckedIn
-        ? await ApiService.punchOut(position.latitude, position.longitude)
-        : await ApiService.punchIn(position.latitude, position.longitude);
+        ? await ApiService.punchOut(position.latitude, position.longitude, photo)
+        : await ApiService.punchIn(position.latitude, position.longitude, photo);
 
     if (!mounted) return;
     setState(() => _punching = false);
