@@ -38,27 +38,26 @@ jobs:
           sed -i 's/android:label="[^"]*"/android:label="SAC"/' android/app/src/main/AndroidManifest.xml
           echo "===== AndroidManifest.xml (سطر label) ====="
           grep "android:label" android/app/src/main/AndroidManifest.xml
-      - name: إضافة رخصة الإنترنت والموقع (ضرورية لتحميل اللوجو والاتصال بالـAPI وتسجيل الحضور)
+      - name: إضافة رخصة الإنترنت والموقع والكاميرا
         run: |
-          sed -i '/<manifest/a\    <uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>' android/app/src/main/AndroidManifest.xml
+          sed -i '/<manifest/a\    <uses-permission android:name="android.permission.INTERNET"/>\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>\n    <uses-permission android:name="android.permission.CAMERA"/>\n    <uses-feature android:name="android.hardware.camera" android:required="false"/>\n    <uses-feature android:name="android.hardware.camera.front" android:required="false"/>' android/app/src/main/AndroidManifest.xml
           echo "===== AndroidManifest.xml (كامل) ====="
           cat android/app/src/main/AndroidManifest.xml
       - name: تثبيت الحزم
         run: flutter pub get
-      - name: تصحيح ملف geolocator_android مباشرة (باج معروف مع flutter.compileSdkVersion)
+      - name: تصحيح ملفات gradle لكل المكتبات (باج معروف مع flutter.compileSdkVersion)
         run: |
-          GEO_GRADLE=$(find / -path "*/geolocator_android-*/android/build.gradle" 2>/dev/null | head -1)
-          if [ -n "$GEO_GRADLE" ]; then
-            echo "لقيت الملف في: $GEO_GRADLE"
-            sed -i 's/flutter\.compileSdkVersion/35/g' "$GEO_GRADLE"
-            sed -i 's/flutter\.ndkVersion/"25.1.8937393"/g' "$GEO_GRADLE"
-            sed -i 's/flutter\.minSdkVersion/21/g' "$GEO_GRADLE"
-            sed -i 's/flutter\.targetSdkVersion/35/g' "$GEO_GRADLE"
-            echo "===== محتوى الملف بعد التصحيح ====="
-            cat "$GEO_GRADLE"
-          else
-            echo "تحذير: لم يتم العثور على ملف geolocator_android build.gradle"
-          fi
+          FOUND_FILES=$(find / -path "*/android/build.gradle" -path "*pub-cache*" 2>/dev/null)
+          for f in $FOUND_FILES; do
+            if grep -q "flutter\.compileSdkVersion\|flutter\.ndkVersion\|flutter\.minSdkVersion\|flutter\.targetSdkVersion" "$f" 2>/dev/null; then
+              echo "تصحيح: $f"
+              sed -i 's/flutter\.compileSdkVersion/35/g' "$f"
+              sed -i 's/flutter\.ndkVersion/"25.1.8937393"/g' "$f"
+              sed -i 's/flutter\.minSdkVersion/21/g' "$f"
+              sed -i 's/flutter\.targetSdkVersion/35/g' "$f"
+            fi
+          done
+          echo "انتهى فحص وتصحيح كل ملفات gradle"
       - name: توليد أيقونة التطبيق من assets/icon/app_icon.png
         run: dart run flutter_launcher_icons
       - name: بناء APK
