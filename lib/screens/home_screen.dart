@@ -4,6 +4,11 @@ import '../widgets/more_sheet.dart';
 import '../services/api_service.dart';
 import 'package:geolocator/geolocator.dart';
 
+/// رقم/وقت البناء — بيتغير تلقائيًا مع كل عملية بناء جديدة عبر build.yml،
+/// عشان تقدر تتأكد فورًا إنك شغال بآخر نسخة فعليًا.
+const String kBuildStamp =
+    String.fromEnvironment('BUILD_STAMP', defaultValue: 'محلي (غير محدد)');
+
 class HomeScreen extends StatefulWidget {
   final String userName;
   const HomeScreen({super.key, required this.userName});
@@ -310,6 +315,9 @@ class _Header extends StatelessWidget {
                         style: TextStyle(color: Colors.white70, fontSize: 10.5)),
                   ],
                 ),
+                const SizedBox(height: 3),
+                Text('نسخة البناء: $kBuildStamp',
+                    style: const TextStyle(color: Colors.white38, fontSize: 8.5)),
               ],
             ),
           ),
