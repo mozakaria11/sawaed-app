@@ -702,6 +702,7 @@ class _SalaryCard extends StatelessWidget {
     final deductions = payroll!['deductions_total'] as num? ?? 0;
     final net = payroll!['net_salary'] as num? ?? 0;
     final monthLabel = payroll!['month_label'] as String? ?? '';
+    final isEstimated = payroll!['status'] == 'estimated';
 
     final items = [
       ('الأساسي', '${_fmt(basic)} ر.س', Colors.white),
@@ -720,8 +721,13 @@ class _SalaryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('صافي راتب $monthLabel',
+          Text(isEstimated ? 'الراتب الأساسي التعاقدي' : 'صافي راتب $monthLabel',
               style: const TextStyle(color: Colors.white60, fontSize: 11)),
+          if (isEstimated) ...[
+            const SizedBox(height: 2),
+            const Text('لم يُحتسب راتب هذا الشهر رسميًا بعد',
+                style: TextStyle(color: Colors.white38, fontSize: 9.5)),
+          ],
           const SizedBox(height: 4),
           RichText(
             text: TextSpan(children: [
