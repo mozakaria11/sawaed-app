@@ -47,7 +47,7 @@ jobs:
         run: flutter pub get
       - name: تصحيح ملفات gradle لكل المكتبات (باج معروف مع flutter.compileSdkVersion)
         run: |
-          FOUND_FILES=$(find / -path "*/android/build.gradle" -path "*pub-cache*" 2>/dev/null)
+          FOUND_FILES=$(find "$HOME/.pub-cache" /opt/hostedtoolcache/flutter -path "*/android/build.gradle" 2>/dev/null || true)
           for f in $FOUND_FILES; do
             if grep -q "flutter\.compileSdkVersion\|flutter\.ndkVersion\|flutter\.minSdkVersion\|flutter\.targetSdkVersion" "$f" 2>/dev/null; then
               echo "تصحيح: $f"
