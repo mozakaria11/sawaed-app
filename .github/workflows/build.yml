@@ -45,6 +45,20 @@ jobs:
           cat android/app/src/main/AndroidManifest.xml
       - name: تثبيت الحزم
         run: flutter pub get
+      - name: تصحيح ملف geolocator_android مباشرة (باج معروف مع flutter.compileSdkVersion)
+        run: |
+          GEO_GRADLE=$(find / -path "*/geolocator_android-*/android/build.gradle" 2>/dev/null | head -1)
+          if [ -n "$GEO_GRADLE" ]; then
+            echo "لقيت الملف في: $GEO_GRADLE"
+            sed -i 's/flutter\.compileSdkVersion/35/g' "$GEO_GRADLE"
+            sed -i 's/flutter\.ndkVersion/"25.1.8937393"/g' "$GEO_GRADLE"
+            sed -i 's/flutter\.minSdkVersion/21/g' "$GEO_GRADLE"
+            sed -i 's/flutter\.targetSdkVersion/35/g' "$GEO_GRADLE"
+            echo "===== محتوى الملف بعد التصحيح ====="
+            cat "$GEO_GRADLE"
+          else
+            echo "تحذير: لم يتم العثور على ملف geolocator_android build.gradle"
+          fi
       - name: توليد أيقونة التطبيق من assets/icon/app_icon.png
         run: dart run flutter_launcher_icons
       - name: بناء APK
