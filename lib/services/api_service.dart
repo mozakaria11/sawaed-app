@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -123,48 +124,53 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>> punchIn(double lat, double lng) async {
+  static Future<Map<String, dynamic>> punchIn(
+      double lat, double lng, File? photo) async {
+    return _punchRequest('punch-in', lat, lng, photo, 'تعذر تسجيل الحضور');
+  }
+
+  static Future<Map<String, dynamic>> punchOut(
+      double lat, double lng, File? photo) async {
+    return _punchRequest('punch-out', lat, lng, photo, 'تعذر تسجيل الانصراف');
+  }
+
+  static Future<Map<String, dynamic>> _punchRequest(
+    String endpoint,
+    double lat,
+    double lng,
+    File? photo,
+    String defaultErrorMessage,
+  ) async {
     final token = await getToken();
     try {
-      final res = await http.post(
-        Uri.parse('$baseUrl/attendance/punch-in'),
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: {'latitude': lat.toString(), 'longitude': lng.toString()},
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/attendance/$endpoint'),
       );
+      request.headers['Accept'] = 'application/json';
+      request.headers['Authorization'] = 'Bearer $token';
+      request.fields['latitude'] = lat.toString();
+      request.fields['longitude'] = lng.toString();
+
+      if (photo != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath('photo', photo.path),
+        );
+      }
+
+      final streamedResponse = await request.send();
+      final res = await http.Response.fromStream(streamedResponse);
       final body = jsonDecode(res.body);
+
       if (res.statusCode == 200) {
         return {'success': true, ...body};
       }
       return {
         'success': false,
-        'message': body['message'] ?? 'تعذر تسجيل الحضور',
+        'message': body['message'] ?? defaultErrorMessage,
         'distance': body['distance'],
         'allowed_radius': body['allowed_radius'],
       };
-    } catch (e) {
-      return {'success': false, 'message': 'تعذر الاتصال بالسيرفر'};
-    }
-  }
-
-  static Future<Map<String, dynamic>> punchOut(double lat, double lng) async {
-    final token = await getToken();
-    try {
-      final res = await http.post(
-        Uri.parse('$baseUrl/attendance/punch-out'),
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: {'latitude': lat.toString(), 'longitude': lng.toString()},
-      );
-      final body = jsonDecode(res.body);
-      if (res.statusCode == 200) {
-        return {'success': true, ...body};
-      }
-      return {'success': false, 'message': body['message'] ?? 'تعذر تسجيل الانصراف'};
     } catch (e) {
       return {'success': false, 'message': 'تعذر الاتصال بالسيرفر'};
     }
